@@ -104,7 +104,7 @@ class CookieTransport(xmlrpclib.Transport):
     cookiejar = None
     scheme = 'http'
 
-    # Cribbed from xmlrpclib.Transport.send_user_agent 
+    # Cribbed from xmlrpclib.Transport.send_user_agent
     def send_cookies(self, connection, cookie_request):
         if self.cookiejar is None:
             self.cookiejar = cookielib.CookieJar()
@@ -119,20 +119,22 @@ class CookieTransport(xmlrpclib.Transport):
             # ...and put them over the connection
             for h,v in cookielist:
                 connection.putheader(h,v)
+        else:
+            pass
 
-    # This is the same request() method from xmlrpclib.Transport,
+    # This is the same request() method from python 2.6's xmlrpclib.Transport,
     # with a couple additions noted below
-    def request(self, host, handler, request_body, verbose=0):
+    def request_with_cookies(self, host, handler, request_body, verbose=0):
         h = self.make_connection(host)
         if verbose:
             h.set_debuglevel(1)
 
         # ADDED: construct the URL and Request object for proper cookie handling
-        request_url = "%s://%s/" % (self.scheme,host)
-        cookie_request  = urllib2.Request(request_url) 
+        request_url = "%s://%s%s" % (self.scheme,host,handler)
+        cookie_request  = urllib2.Request(request_url)
 
         self.send_request(h,handler,request_body)
-        self.send_host(h,host) 
+        self.send_host(h,host)
         self.send_cookies(h,cookie_request) # ADDED. creates cookiejar if None.
         self.send_user_agent(h)
         self.send_content(h,request_body)
@@ -149,7 +151,10 @@ class CookieTransport(xmlrpclib.Transport):
         self.cookiejar.extract_cookies(cookie_response,cookie_request)
         # And write back any changes
         if hasattr(self.cookiejar,'save'):
-            self.cookiejar.save(self.cookiejar.filename)
+            try:
+                self.cookiejar.save(self.cookiejar.filename)
+            except Exception, e:
+                pass
 
         if errcode != 200:
             raise xmlrpclib.ProtocolError(
@@ -167,10 +172,76 @@ class CookieTransport(xmlrpclib.Transport):
 
         return self._parse_response(h.getfile(), sock)
 
+    # This is just python 2.7's xmlrpclib.Transport.single_request, with
+    # send additions noted below to send cookies along with the request
+    def single_request_with_cookies(self, host, handler, request_body, verbose=0):
+        h = self.make_connection(host)
+        if verbose:
+            h.set_debuglevel(1)
+
+        # ADDED: construct the URL and Request object for proper cookie handling
+        request_url = "%s://%s%s" % (self.scheme,host,handler)
+        cookie_request  = urllib2.Request(request_url)
+
+        try:
+            self.send_request(h,handler,request_body)
+            self.send_host(h,host)
+            self.send_cookies(h,cookie_request) # ADDED. creates cookiejar if None.
+            self.send_user_agent(h)
+            self.send_content(h,request_body)
+
+            response = h.getresponse(buffering=True)
+
+            # ADDED: parse headers and get cookies here
+            # fake a response object that we can fill with the headers above
+            class CookieResponse:
+                def __init__(self,headers): self.headers = headers
+                def info(self): return self.headers
+
+            cookie_response = CookieResponse(response.msg)
+            # Okay, extract the cookies from the headers
+            self.cookiejar.extract_cookies(cookie_response,cookie_request)
+            # And write back any changes
+            if hasattr(self.cookiejar,'save'):
+                try:
+                    self.cookiejar.save(self.cookiejar.filename)
+                except Exception, e:
+                    pass
+
+            if response.status == 200:
+                self.verbose = verbose
+                return self.parse_response(response)
+        except xmlrpclib.Fault:
+            raise
+        except Exception:
+            # All unexpected errors leave connection in
+            # a strange state, so we clear it.
+            self.close()
+            raise
+
+        #discard any response data and raise exception
+        if (response.getheader("content-length", 0)):
+            response.read()
+        raise xmlrpclib.ProtocolError(
+            host + handler,
+            response.status, response.reason,
+            response.msg,
+            )
+
+    # Override the appropriate request method
+    if hasattr(xmlrpclib.Transport, 'single_request'):
+        single_request = single_request_with_cookies # python 2.7+
+    else:
+        request = request_with_cookies # python 2.6 and earlier
+
 class SafeCookieTransport(xmlrpclib.SafeTransport,CookieTransport):
     '''SafeTransport subclass that supports cookies.'''
     scheme = 'https'
-    request = CookieTransport.request
+    # Override the appropriate request method
+    if hasattr(xmlrpclib.Transport, 'single_request'):
+        single_request = CookieTransport.single_request_with_cookies # python 2.7+
+    else:
+        request = CookieTransport.request_with_cookies # python 2.6 and earlier
 
 VERBOSE=0
 DEBUG=0
