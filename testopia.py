@@ -707,11 +707,11 @@ class Testopia(object):
         Result: The product id for the respective name.
         """
         # really ought to be using exceptions for error-handling
-        prodDict = self.do_command('Product.check_product', [self._string_noop(name)])
+        prodDict = self.do_command('TestopiaProduct.check_product', [self._string_noop(name)])
         return prodDict['id']
 
     def product_check_by_name(self, name):
-        return self.do_command("Product.check_product", [self._string_noop(name)])
+        return self.do_command("TestopiaProduct.check_product", [self._string_noop(name)])
 
     def product_lookup_name_by_id(self, id):
         """Lookup A Product Name By Its ID.
@@ -722,7 +722,7 @@ class Testopia(object):
 
         Result: The product name for the respective id or empty string if an error occurs.
         """
-        return self.do_command("Product.lookup_name_by_id", [self._number_noop(id)])
+        return self.do_command("TestopiaProduct.lookup_name_by_id", [self._number_noop(id)])
 
 
     def product_get_milestones(self, product_id):
@@ -734,7 +734,7 @@ class Testopia(object):
 
         Result: A list of Milestone dictionaries
         """
-        return self.do_command("Product.get_milestones", [self._number_noop(product_id)])
+        return self.do_command("TestopiaProduct.get_milestones", [self._number_noop(product_id)])
 
 
     ############################## Tag #######################################
