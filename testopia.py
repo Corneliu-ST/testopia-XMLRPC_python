@@ -573,7 +573,7 @@ class Testopia(object):
                    )])
 
 
-    def build_lookup_id_by_name(self, name):
+    def build_lookup_id_by_name(self, name, product_id):
         """Lookup A Build ID By Its Name.
 
         'name' -- string, Cannot be null or empty string
@@ -582,7 +582,7 @@ class Testopia(object):
 
         Result: The build id for the respective name or 0 if an error occurs.
         """
-        return self.do_command("Build.lookup_id_by_name", [self._string_noop(name)])
+        return self.build_check_by_name(name, product_id)['build_id']
 
     def build_check_by_name(self, name, product_id):
         return self.do_command("Build.check_build", [self._string_noop(name),
@@ -597,7 +597,7 @@ class Testopia(object):
 
         Result: The build name for the respective id or empty string if an error occurs.
         """
-        return self.do_command("Build.lookup_name_by_id", [self._number_noop(id)])
+        return self.build_get(id)['name']
 
 
     ############################## Environment ##################################
@@ -696,7 +696,10 @@ class Testopia(object):
 
     ############################## Product ##################################
 
+    def product_get(self, product_id):
+        return self.do_command("TestopiaProduct.get", [self._number_noop(product_id)])
 
+#TAG: not working
     def product_lookup_id_by_name(self, name):
         """Lookup A Product ID By Its Name.
 
@@ -713,7 +716,7 @@ class Testopia(object):
     def product_check_by_name(self, name):
         return self.do_command("TestopiaProduct.check_product", [self._string_noop(name)])
 
-    def product_lookup_name_by_id(self, id):
+    def product_lookup_name_by_id(self, product_id):
         """Lookup A Product Name By Its ID.
 
         'id' -- int, Cannot be 0
@@ -722,7 +725,7 @@ class Testopia(object):
 
         Result: The product name for the respective id or empty string if an error occurs.
         """
-        return self.do_command("TestopiaProduct.lookup_name_by_id", [self._number_noop(id)])
+        return self.product_get(product_id)['name']
 
 
     def product_get_milestones(self, product_id):
@@ -905,7 +908,7 @@ class Testopia(object):
 
         Result: A list of Build objects on success
         """
-        return self.do_command("TestPlan.get_builds", [self._number_noop(plan_id)])
+        return self.do_command("TestopiaProduct.get_builds", [self._number_noop(plan_id)])
 
 
     def testplan_get_components(self, plan_id):
@@ -1349,7 +1352,7 @@ class Testopia(object):
         """
         return self.do_command("TestCase.get_plans", [self._number_noop(case_id)])
 
-
+#TAG: not working
     def testcase_lookup_category_id_by_name(self, name):
         """Lookup A TestCase Category ID By Its Name.
 
@@ -1359,7 +1362,7 @@ class Testopia(object):
 
         Result: The TestCase category id for the respective name or 0 if an error occurs.
         """
-        return self.do_command("TestCase.lookup_category_id_by_name", [self._string_noop(name)])
+        return self.do_command("TestopiaProduct.check_category", [self._string_noop(name)])
 
 
     def testcase_lookup_category_name_by_id(self, id):
@@ -1372,7 +1375,7 @@ class Testopia(object):
         Result: The TestCase category name for the respective id or empty string
         if an error occurs.
         """
-        return self.do_command("TestCase.lookup_category_name_by_id", [self._number_noop(id)])
+        return self.do_command("TestopiaProduct.get_category", [self._number_noop(id)])['name']
 
 
     def testcase_lookup_priority_id_by_name(self, name):
@@ -1677,8 +1680,8 @@ class Testopia(object):
         """
         return self.do_command("TestRun.get_tags", [self._number_noop(run_id)])
 
-
-    def testrun_lookup_environment_id_by_name(self, name):
+#TODO: should make it work with product_id=None as well
+    def testrun_lookup_environment_id_by_name(self, name, product_id):
         """Lookup A TestRun Environment ID By Its Name.
 
         'name' -- string,
@@ -1687,7 +1690,7 @@ class Testopia(object):
 
         Result: The TestRun environment id for the respective name or 0 if an error occurs.
         """
-        return self.do_command("TestRun.lookup_environment_id_by_name", [self._string_noop(name)])
+        return self.do_command("Environment.check_environment", [self._string_noop(name), self._number_noop(product_id)])['environment_id']
 
 
     def testrun_lookup_environment_name_by_id(self, id):
@@ -1699,7 +1702,7 @@ class Testopia(object):
 
         Result: The TestRun environment name for the respective id or empty string if an error occurs.
         """
-        return self.do_command("TestRun.lookup_environment_name_by_id", [self._number_noop(id)])
+        return self.do_command("Environment.get", [self._number_noop(id)])['name']
 
 
     ############################## TestCaseRun ##################################
