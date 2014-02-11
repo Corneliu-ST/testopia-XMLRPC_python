@@ -1569,7 +1569,7 @@ class Testopia(object):
 
         Example: testrun_create(1, 1, 1, 1, 'Summary')
 
-        Result: An integer value representing the new run_id
+        Result: Result: A dictionary of key/value pairs representing the new testrun
         """
         return self.do_command("TestRun.create", [self._options_dict(
                    self._number_option('build_id', build_id),
