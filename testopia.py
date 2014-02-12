@@ -504,8 +504,10 @@ class Testopia(object):
         #pprint(self.server._ServerProxy__transport.cookiejar._cookies)
         try:
             return eval(cmd)
-        except xmlrpclib.Error, e:
-            raise TestopiaXmlrpcError(verb, params, e)
+        except:
+            return None
+#        except xmlrpclib.Error, e:
+#            raise TestopiaXmlrpcError(verb, params, e)
         
     ############################## Build #######################################
 
@@ -653,7 +655,7 @@ class Testopia(object):
 
         Example: environment_create(1, True)
 
-        Result: An integer value representing the new environment_id
+        Result: An dictionary representing the new environment
         """
         return self.do_command("Environment.create", [self._options_dict(
                    self._number_option('product_id', product_id),
