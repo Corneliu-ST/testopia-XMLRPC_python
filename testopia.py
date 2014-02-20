@@ -504,10 +504,8 @@ class Testopia(object):
         #pprint(self.server._ServerProxy__transport.cookiejar._cookies)
         try:
             return eval(cmd)
-        except:
-            return None
-#        except xmlrpclib.Error, e:
-#            raise TestopiaXmlrpcError(verb, params, e)
+        except xmlrpclib.Error, e:
+            raise TestopiaXmlrpcError(verb, params, e)
         
     ############################## Build #######################################
 
@@ -536,7 +534,7 @@ class Testopia(object):
 
         Example: build_create(name='New Build', product_id=1)
 
-        Result: An integer value representing the new build_id
+        Result: A dictionary representing the new build
         """
         return self.do_command("Build.create", [self._options_dict(
                    self._string_option("name", name),
@@ -655,7 +653,7 @@ class Testopia(object):
 
         Example: environment_create(1, True)
 
-        Result: An dictionary representing the new environment
+        Result: A dictionary representing the new environment
         """
         return self.do_command("Environment.create", [self._options_dict(
                    self._number_option('product_id', product_id),
@@ -873,7 +871,7 @@ class Testopia(object):
 
         Example: testplan_create('New Plan', 1, 2, 2, '1.0')
 
-        Result: An integer value representing the new plan_id
+        Result: A dictionary representing the new test plan
         """
         return self.do_command("TestPlan.create", [self._options_dict(
                    self._string_option('name', name),
@@ -1163,7 +1161,7 @@ class Testopia(object):
 
         Example: testcase_create('Summary', 1, 1, 0, 1, 2)
 
-        Result: An integer value representing the new case_id
+        Result: A dictionary representing the new test case
         """
         return self.do_command("TestCase.create", [self._options_dict(
                    self._string_option('summary', summary),
@@ -1571,7 +1569,7 @@ class Testopia(object):
 
         Example: testrun_create(1, 1, 1, 1, 'Summary')
 
-        Result: Result: A dictionary of key/value pairs representing the new testrun
+        Result: A dictionary of key/value pairs representing the new testrun
         """
         return self.do_command("TestRun.create", [self._options_dict(
                    self._number_option('build_id', build_id),
@@ -1600,7 +1598,7 @@ class Testopia(object):
         'notes' -- string, optional
         'product_version' -- integer, optional
 
-        Example: testrun_create(1, 1, 1, 1, 'Summary')
+        Example: testrun_update(1, 1, 1, 1, 'Summary')
 
         Result: The modified TestRun on success
         """
@@ -1831,7 +1829,7 @@ class Testopia(object):
 
         Example: testcaserun_create(1, 1, 1, 1, 1)
 
-        Result: An integer value representing the new test case run id on success;
+        Result: A dictionary representing the new test case run on success;
         on error, an XmlRpcException is thrown.
         """
         return self.do_command("TestCaseRun.create", [self._options_dict(
