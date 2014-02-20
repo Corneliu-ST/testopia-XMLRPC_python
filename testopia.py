@@ -597,8 +597,7 @@ class Testopia(object):
 
         Result: The user id for the respective login or 0 if an error occurs.
         """
-        return self.do_command("User.lookup_id_by_login", [self._string_noop(login)])
-        return self.do_command("User.lookup_login_by_id", [self._number_noop(id)])
+        return self.do_command("TestopiaUser.lookup_id_by_login", [self._string_noop(login)])
 
 
     ############################## TestPlan ##################################
