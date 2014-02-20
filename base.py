@@ -3,14 +3,14 @@ import re
 
 class YpTestopia(Testopia):
 
-    def __init__(self, url, user, password, build_branch, build_commit, milestone, environment, product_version, build_date=None):
+    def __init__(self, url, user, password, build_branch, build_commit, milestone, environment, product_version, build_date='', extra_testrun_summary=''):
         self.url = url
         self.user = user
         self.password = password
         self.build_branch = build_branch
         self.build_commit = build_commit
-        self.testrun_auto_summary = build_date + ' - ' + 'automated'
-        self.automation_user_id = 1 # we could determine this automatically
+        self.extra_testrun_summary = extra_testrun_summary
+        self.testrun_auto_summary = build_date + ' - automated ' + self.extra_testrun_summary
         self.milestone = milestone
         self.environment = environment
         self.environment_placeholder = 'placeholder - ' + self.environment
@@ -18,6 +18,7 @@ class YpTestopia(Testopia):
         self.product_version = product_version
         self.reset_product()
         super(YpTestopia, self).__init__(user, password, url)
+        self.automation_user_id = self.user_lookup_id_by_login(self.user)
 
 
     def reset_caserun(self):
@@ -43,7 +44,7 @@ class YpTestopia(Testopia):
         self.product_initiated = False
 
     def copy(self):
-        return YpTestopia(url=self.url, user=self.user, password=self.password, build_branch=self.build_branch, build_commit=self.build_commit, milestone=self.milestone, environment=self.environment, product_version=self.product_version, build_date=self.build_date)
+        return YpTestopia(url=self.url, user=self.user, password=self.password, build_branch=self.build_branch, build_commit=self.build_commit, milestone=self.milestone, environment=self.environment, product_version=self.product_version, build_date=self.build_date, extra_testrun_summary=self.extra_testrun_summary)
 
     def init_product(self, product_name):
         self.reset_caserun()
@@ -52,24 +53,24 @@ class YpTestopia(Testopia):
         self.product_name = product_name
         self.product_object = self.product_check_by_name(self.product_name)
         if not self.product_object:
-            print "ERROR: Could not find Product"
+            print "ERROR: Could not find Product '%s'" % self.product_name
             return None
         self.product_id = self.product_object['id']
 
         self.testplan_object = self._get_testplan_object()
         if not self.testplan_object:
-            print "ERROR: Could not find Testplan"
+            print "ERROR: Could not find testplan '%s: %s branch'" % (self.product_name, self.build_branch)
             return None
         self.testplan_id = self.testplan_object['plan_id']
         self.testplan_name = self.testplan_object['name']
 
-        self.environment_object = self._get_environment_object() # what happens if the evnvironment is not active?
+        self.environment_object = self._get_environment_object()
         if not self.environment_object:
             print "Environment does not exist!"
             self.environment_object = self._create_environment_placeholder()
         self.environment_id = self.environment_object['environment_id']
 
-        self.build_object = self._get_build_object() #  what happens if the build is not active?
+        self.build_object = self._get_build_object()
         if not self.build_object:
             print "Build does not exist!"
             self.build_object = self._create_build()
@@ -83,35 +84,28 @@ class YpTestopia(Testopia):
         self.product_initiated = True
         return True
 
-    def init_caserun_by_alias(self, testcase_alias):
+    def init_caserun_by_id(self, testcase_id, create_if_nonexistant=False):
         self.reset_caserun()
         if not self.product_initiated:
             print "ERROR: Cannot initiate caserun because product is not initiated"
             return None
-        self.testcase_alias = testcase_alias
+        self.testcase_id = testcase_id
         self.testcase_object = self._get_testcase_object()
-        self.testcase_id = self.testcase_object['case_id']
-        self.caserun_initiated = True
-        return True
-
-    def init_caserun_by_id(self, testcase_id):
-        self.reset_caserun()
-        if not self.product_initiated:
-            print "ERROR: Cannot initiate caserun because product is not initiated"
+        if self.testcase_object:
+            self.caserun_initiated = True
+            return True
+        else:
+            print "ERROR: Cannot find test case with ID '%s' in product '%s' and testplan '%s'" % (self.testcase_id, self.product_name, self.testplan_name)
             return None
-        self.testcase_id = testcase_id # What happens when testcase_id is not in the current testplan/product/does not exist at all? :(
-        self.testcase_object = self.testcase_get(self.testcase_id)
-        self.caserun_initiated = True
-        return True
 
     def execute_caserun(self, caserun_status):
         if not self.caserun_initiated:
             print "ERROR: Cannot execute uninitiated caserun"
             return None
-        if not self._check_testcase_in_testrun(): # What if TestRun is STOPPED?
+        if not self._check_testcase_in_testrun(): # What if TestRun is STOPPED? - aparently it doesn't care :)
             print "Case Run does not exist!"
             self._add_caserun()
-        self._update_caserun(caserun_status) # What if status is not valid?
+        self._update_caserun(caserun_status) # What if status is not valid? - it gives an error, as it should! :)
 
 
     def _check_for_single_result(self, check_list):
@@ -128,11 +122,9 @@ class YpTestopia(Testopia):
         testplan_object = [testplan for testplan in testplan_list for m in [regex.search(str(testplan['name']))] if m]
         return self._check_for_single_result(testplan_object)
 
-    def _get_testcase_object(self): # make this work with provided testcase_id ? As a check if testcase_id is in the right product and test plan.
+    def _get_testcase_object(self):
         testcase_list = self.testplan_get_test_cases(self.testplan_id)
-        regex = re.compile("^%s$" % self.testcase_alias, re.IGNORECASE)
-        automated_testcase = [testcase for testcase in testcase_list if testcase['isautomated'] == 1] # we need a check for CONFIRMED status only
-        testcase_object = [testcase for testcase in automated_testcase if testcase.get('alias') for m in [regex.search(str(testcase['alias']))] if m]
+        testcase_object = [testcase for testcase in testcase_list if testcase['case_id'] == self.testcase_id]
         return self._check_for_single_result(testcase_object)
 
     def _get_environment_object(self):
@@ -148,7 +140,7 @@ class YpTestopia(Testopia):
     def _get_build_object(self):
         build_list = self.product_get_builds(self.product_id)
         commit_regex = re.compile("%s" % self.build_commit, re.IGNORECASE)
-        # We need a better way to find the correct build if commit matching gives more than 1 result (small theoretical probability though)
+        # We need a better way to find the correct build if commit matching gives more than 1 result (small theoretical probability though) (P2)
         build_object = [build for build in build_list for m in [commit_regex.search(str(build['name']))] if m]
         if len(build_object) > 1:
             branch_regex = re.compile("%s" % self.build_branch, re.IGNORECASE)
@@ -162,7 +154,7 @@ class YpTestopia(Testopia):
 
     def _get_testrun_auto_object(self):
         testrun_list = self.testplan_get_test_runs(self.testplan_id)
-        summary_regex = re.compile('automated', re.IGNORECASE)
+        summary_regex = re.compile("^%s.*automated.*%s" % (self.build_date, self.extra_testrun_summary), re.IGNORECASE) # all regex should be defined in an initiation method for easy maintenance. (P2)
         testrun_object = [testrun for testrun in testrun_list if testrun['build_id'] == self.build_id if testrun['environment_id'] == self.environment_id for m in [summary_regex.search(str(testrun['summary']))] if m]
         return self._check_for_single_result(testrun_object)
 
